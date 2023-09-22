@@ -27,7 +27,7 @@ limitations under the License.
 #include <QTRSensors.h>
 
 //
-
+// README FIRST, README FIRST, README FIRST
 //
 // Bluepad32 has a built-in interactive console.
 // By default it is enabled (hey, this is a great feature!).
