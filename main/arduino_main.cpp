@@ -167,8 +167,9 @@ void loop() {
 
     //LED FLash
     digitalWrite(LED, HIGH);
-    delay(100);
+    delay(1000);
     digitalWrite(LED, LOW);
+    delay(1000);
 
     // Serial.println(sensor1.getDistanceFloat());
 
