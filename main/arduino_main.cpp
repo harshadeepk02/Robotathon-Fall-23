@@ -25,6 +25,7 @@ limitations under the License.
 #include <ESP32Servo.h>
 #include <ESP32SharpIR.h>
 #include <QTRSensors.h>
+#define LED 2
 
 //
 // README FIRST, README FIRST, README FIRST
@@ -109,6 +110,10 @@ void setup() {
     // Serial.begin(115200);
     // sensor1.setFilterRate(0.1f);
 
+    // LED Pin 
+
+    pinMode(LED, OUTPUT);
+
     // qtr.setTypeRC(); // or setTypeAnalog()
     // qtr.setSensorPins((const uint8_t[]) {12,13,14}, 3);
     // for (uint8_t i = 0; i < 250; i++)
@@ -159,6 +164,11 @@ void loop() {
             // For all the available functions.
         }
     }
+
+    //LED FLash
+    digitalWrite(LED, HIGH);
+    delay(100);
+    digitalWrite(LED, LOW);
 
     // Serial.println(sensor1.getDistanceFloat());
 
