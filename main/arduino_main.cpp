@@ -88,6 +88,11 @@ QTRSensors qtr;
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
+
+    //Sample Code
+    servo.setPeriodHertz(50);
+    servo.attach(13, 1000, 2000);
+
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
 
     // Setup the Bluepad32 callbacks
@@ -132,6 +137,12 @@ void loop() {
     // The gamepads pointer (the ones received in the callbacks) gets updated
     // automatically.
     BP32.update();
+
+    //Sample Code
+    servo.write(1000);
+    delay(1000);
+    servo.write(2000);
+    delay(1000);
 
     // It is safe to always do this before using the gamepad API.
     // This guarantees that the gamepad is valid and connected.
