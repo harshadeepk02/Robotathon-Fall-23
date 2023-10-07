@@ -99,9 +99,9 @@ void setup() {
     servo_L.attach(13, 1000, 2000);
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
-
-    Serial.begin(115200);
-    Serial.begin(115200);
+    if (output==true){
+        Serial.begin(115200);
+    }
 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
@@ -154,8 +154,12 @@ void loop() {
     if (controller && controller->isConnected()){
         float temp1 = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
         float temp2 = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
-        serial.println("Servo_L: " + temp1);
-        serial.println("Servo_R: " + temp2);
+        if (output == true){
+            Serial.print("Servo_L: ");
+            Serial.println(temp1);
+            Serial.print("Servo_R: "); 
+            Serial.println(temp2);
+        }
         servo_L.write(temp1);
         servo_R.write(temp2);
         
