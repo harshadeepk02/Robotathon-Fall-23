@@ -82,7 +82,8 @@ void onDisconnectedGamepad(GamepadPtr gp) {
     }
 }
 
-Servo servo;
+Servo servo_L;
+Servo servo_R;
 ESP32SharpIR sensor1( ESP32SharpIR::GP2Y0A21YK0F, 27);
 QTRSensors qtr;
 
@@ -90,27 +91,33 @@ QTRSensors qtr;
 void setup() {
 
     //Sample Code
-    servo.setPeriodHertz(50);
-    servo.attach(13, 1000, 2000);
+    BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
+    BP32.forgetBluetoothKeys();
+
+    servo_L.setPeriodHertz(50);
+    servo_L.attach(13, 1000, 2000);
+    servo_R.setPeriodHertz(50);
+    servo_R.attach(14, 1000, 2000);
+
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
 
     // Setup the Bluepad32 callbacks
-    BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
+    // BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
 
     // "forgetBluetoothKeys()" should be called when the user performs
     // a "device factory reset", or similar.
     // Calling "forgetBluetoothKeys" in setup() just as an example.
     // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
     // But might also fix some connection / re-connection issues.
-    BP32.forgetBluetoothKeys();
+    // BP32.forgetBluetoothKeys();
 
-    ESP32PWM::allocateTimer(0);
-	ESP32PWM::allocateTimer(1);
-	ESP32PWM::allocateTimer(2);
-	ESP32PWM::allocateTimer(3);
-    servo.setPeriodHertz(50);
-    servo.attach(12, 1000, 2000);
+    // ESP32PWM::allocateTimer(0);
+	// ESP32PWM::allocateTimer(1);
+	// ESP32PWM::allocateTimer(2);
+	// ESP32PWM::allocateTimer(3);
+    // servo.setPeriodHertz(50);
+    // servo.attach(12, 1000, 2000);
 
     // Serial.begin(115200);
     // sensor1.setFilterRate(0.1f);
@@ -118,6 +125,9 @@ void setup() {
     // LED Pin 
 
     pinMode(LED, OUTPUT);
+    pinMode(13, OUTPUT);
+    pinMode(14, OUTPUT);
+
 
     // qtr.setTypeRC(); // or setTypeAnalog()
     // qtr.setSensorPins((const uint8_t[]) {12,13,14}, 3);
@@ -139,42 +149,45 @@ void loop() {
     BP32.update();
 
     //Sample Code
-    servo.write(1000);
-    delay(1000);
-    servo.write(2000);
-    delay(1000);
+    GamepadPtr controller = myGamepads[0];
+    if (controller && controller->isConnected()){
+        servo_L.write(((((float) controller->axisY()) / 512.0f) * 500) + 1500);
+        servo_R.write(((((float) controller->axisRY()) / 512.0f) * 500) + 1500);
+        
+    }
+    vTaskDelay(1);
 
     // It is safe to always do this before using the gamepad API.
     // This guarantees that the gamepad is valid and connected.
-    for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
-        GamepadPtr myGamepad = myGamepads[i];
+    // for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+    //     GamepadPtr myGamepad = myGamepads[i];
 
-        if (myGamepad && myGamepad->isConnected()) {
+    //     if (myGamepad && myGamepad->isConnected()) {
 
-            servo.write( ((((float) myGamepad->axisY()) / 512.0f) * 500) + 1500 );
+    //         servo.write( ((((float) myGamepad->axisY()) / 512.0f) * 500) + 1500 );
 
-            // Another way to query the buttons, is by calling buttons(), or
-            // miscButtons() which return a bitmask.
-            // Some gamepads also have DPAD, axis and more.
-            // Console.printf(
-            //     "idx=%d, dpad: 0x%02x, buttons: 0x%04x, axis L: %4d, %4d, axis R: %4d, "
-            //     "%4d, brake: %4d, throttle: %4d, misc: 0x%02x\n",
-            //     i,                        // Gamepad Index
-            //     myGamepad->dpad(),        // DPAD
-            //     myGamepad->buttons(),     // bitmask of pressed buttons
-            //     myGamepad->axisX(),       // (-511 - 512) left X Axis
-            //     myGamepad->axisY(),       // (-511 - 512) left Y axis
-            //     myGamepad->axisRX(),      // (-511 - 512) right X axis
-            //     myGamepad->axisRY(),      // (-511 - 512) right Y axis
-            //     myGamepad->brake(),       // (0 - 1023): brake button
-            //     myGamepad->throttle(),    // (0 - 1023): throttle (AKA gas) button
-            //     myGamepad->miscButtons()  // bitmak of pressed "misc" buttons
-            // );
+    //         // Another way to query the buttons, is by calling buttons(), or
+    //         // miscButtons() which return a bitmask.
+    //         // Some gamepads also have DPAD, axis and more.
+    //         // Console.printf(
+    //         //     "idx=%d, dpad: 0x%02x, buttons: 0x%04x, axis L: %4d, %4d, axis R: %4d, "
+    //         //     "%4d, brake: %4d, throttle: %4d, misc: 0x%02x\n",
+    //         //     i,                        // Gamepad Index
+    //         //     myGamepad->dpad(),        // DPAD
+    //         //     myGamepad->buttons(),     // bitmask of pressed buttons
+    //         //     myGamepad->axisX(),       // (-511 - 512) left X Axis
+    //         //     myGamepad->axisY(),       // (-511 - 512) left Y axis
+    //         //     myGamepad->axisRX(),      // (-511 - 512) right X axis
+    //         //     myGamepad->axisRY(),      // (-511 - 512) right Y axis
+    //         //     myGamepad->brake(),       // (0 - 1023): brake button
+    //         //     myGamepad->throttle(),    // (0 - 1023): throttle (AKA gas) button
+    //         //     myGamepad->miscButtons()  // bitmak of pressed "misc" buttons
+    //         // );
 
-            // You can query the axis and other properties as well. See Gamepad.h
-            // For all the available functions.
-        }
-    }
+    //         // You can query the axis and other properties as well. See Gamepad.h
+    //         // For all the available functions.
+    //     }
+    // }
 
     //LED FLash
     digitalWrite(LED, HIGH);
@@ -198,6 +211,5 @@ void loop() {
     // if(error == 0){
     //     Serial.println("Straight Ahead");  
     // }
-    vTaskDelay(1);
     // delay(100);
 }
