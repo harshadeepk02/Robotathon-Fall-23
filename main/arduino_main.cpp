@@ -26,7 +26,7 @@ limitations under the License.
 #include <ESP32SharpIR.h>
 #include <QTRSensors.h>
 #define LED 2
-boolean output = true;
+boolean output = false;
 
 //
 // README FIRST, README FIRST, README FIRST
