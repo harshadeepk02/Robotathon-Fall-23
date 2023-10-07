@@ -26,6 +26,7 @@ limitations under the License.
 #include <ESP32SharpIR.h>
 #include <QTRSensors.h>
 #define LED 2
+boolean output = true;
 
 //
 // README FIRST, README FIRST, README FIRST
@@ -100,6 +101,7 @@ void setup() {
     servo_R.attach(14, 1000, 2000);
 
     Serial.begin(115200);
+    Serial.begin(115200);
 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
@@ -126,12 +128,9 @@ void setup() {
 
     // LED Pin 
 
-    pinMode(LED, OUTPUT);
-    pinMode(13, OUTPUT);
-    pinMode(14, OUTPUT);
+    //pinMode(LED, OUTPUT);
 
-
-    // qtr.setTypeRC(); // or setTypeAnalog()
+    // qtr.setTypeRC(); // or se    tTypeAnalog()
     // qtr.setSensorPins((const uint8_t[]) {12,13,14}, 3);
     // for (uint8_t i = 0; i < 250; i++)
     // {
@@ -155,10 +154,8 @@ void loop() {
     if (controller && controller->isConnected()){
         float temp1 = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
         float temp2 = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
-        Serial.print("Servo_L: "); 
-        Serial.println(temp1);
-        Serial.print("Servo_R: "); 
-        Serial.println(temp2);
+        serial.println("Servo_L: " + temp1);
+        serial.println("Servo_R: " + temp2);
         servo_L.write(temp1);
         servo_R.write(temp2);
         
@@ -198,10 +195,10 @@ void loop() {
     // }
 
     //LED FLash
-    digitalWrite(LED, HIGH);
-    delay(1000);
-    digitalWrite(LED, LOW);
-    delay(1000);
+    // digitalWrite(LED, HIGH);
+    // delay(1000);
+    // digitalWrite(LED, LOW);
+    // delay(1000);
 
     // Serial.println(sensor1.getDistanceFloat());
 
