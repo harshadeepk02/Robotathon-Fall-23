@@ -26,6 +26,7 @@ limitations under the License.
 #include <ESP32SharpIR.h>
 #include <QTRSensors.h>
 #define LED 2
+boolean output = true;
 
 //
 // README FIRST, README FIRST, README FIRST
@@ -99,7 +100,7 @@ void setup() {
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
 
-    serial.begin(115200);
+    Serial.begin(115200);
 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
@@ -126,12 +127,9 @@ void setup() {
 
     // LED Pin 
 
-    pinMode(LED, OUTPUT);
-    pinMode(13, OUTPUT);
-    pinMode(14, OUTPUT);
+    //pinMode(LED, OUTPUT);
 
-
-    // qtr.setTypeRC(); // or setTypeAnalog()
+    // qtr.setTypeRC(); // or se    tTypeAnalog()
     // qtr.setSensorPins((const uint8_t[]) {12,13,14}, 3);
     // for (uint8_t i = 0; i < 250; i++)
     // {
@@ -153,12 +151,16 @@ void loop() {
     //Sample Code
     GamepadPtr controller = myGamepads[0];
     if (controller && controller->isConnected()){
-        float temp1 = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
-        float temp2 = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
-        serial.println("Servo_L: " + temp1);
-        serial.println("Servo_R: " + temp2);
-        servo_L.write(temp1);
-        servo_R.write(temp2);
+        float leftInput = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
+        float rightInput = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
+        if(output){
+            Serial.print("Servo_L: ");
+            Serial.print(leftInput);
+            Serial.print("Servo_R: ");
+            Serial.print(rightInput);
+        }
+        servo_L.write(leftInput);
+        servo_R.write(rightInput);
         
     }
     vTaskDelay(1);
@@ -196,10 +198,10 @@ void loop() {
     // }
 
     //LED FLash
-    digitalWrite(LED, HIGH);
-    delay(1000);
-    digitalWrite(LED, LOW);
-    delay(1000);
+    // digitalWrite(LED, HIGH);
+    // delay(1000);
+    // digitalWrite(LED, LOW);
+    // delay(1000);
 
     // Serial.println(sensor1.getDistanceFloat());
 
