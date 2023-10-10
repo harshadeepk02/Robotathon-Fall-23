@@ -161,29 +161,17 @@ void loop() {
     //Sample Code
     GamepadPtr controller = myGamepads[0];
     if (controller && controller->isConnected()){
-        float leftInput = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
-        float rightInput = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
-        if(output){
+        float temp1 = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
+        float temp2 = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
+        if (output == true){
             Serial.print("Servo_L: ");
-            Serial.print(leftInput);
-            Serial.print("Servo_R: ");
-            Serial.print(rightInput);
+            Serial.println(temp1);
+            Serial.print("Servo_R: "); 
+            Serial.println(temp2);
         }
         servo_L.write(leftInput);
         servo_R.write(rightInput);
         
-    }
-    
-    uint16_t sensors[3];
-    int16_t position = qtr.readLineBlack(sensors);
-    int16_t error = position - 1000;
-    if (error < 0){
-        //Turn left
-        servo_L.write(500);
-    }
-    if (error > 0){
-        //Turn right
-        servo_R.write(500);
     }
     vTaskDelay(1);
 
