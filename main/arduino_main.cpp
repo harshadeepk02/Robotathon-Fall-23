@@ -93,7 +93,7 @@ void setup() {
 
     //Sample Code
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
-    BP32.forgetBluetoothKeys();
+    //BP32.forgetBluetoothKeys();
 
     servo_L.setPeriodHertz(50);
     servo_L.attach(13, 1000, 2000);
@@ -101,6 +101,16 @@ void setup() {
     servo_R.attach(14, 1000, 2000);
 
     Serial.begin(115200);
+    qtr.setTypeAnalog();
+    qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
+
+    for(uint8_t i = 0; i < 250; i++){
+        Serial.println("calibrating");
+        qtr.calibrate();
+        delay(20);
+    }
+
+
 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
@@ -162,6 +172,18 @@ void loop() {
         servo_L.write(leftInput);
         servo_R.write(rightInput);
         
+    }
+    
+    uint16_t sensors[3];
+    int16_t position = qtr.readLineBlack(sensors);
+    int16_t error = position - 1000;
+    if (error < 0){
+        //Turn left
+        servo_L.write(500);
+    }
+    if (error > 0){
+        //Turn right
+        servo_R.write(500);
     }
     vTaskDelay(1);
 
