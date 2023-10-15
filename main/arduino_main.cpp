@@ -93,7 +93,7 @@ void setup() {
 
     //Sample Code
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
-    //BP32.forgetBluetoothKeys();
+    BP32.forgetBluetoothKeys();
 
     servo_L.setPeriodHertz(50);
     servo_L.attach(13, 1000, 2000);
@@ -101,14 +101,15 @@ void setup() {
     servo_R.attach(14, 1000, 2000);
 
     Serial.begin(115200);
-    qtr.setTypeAnalog();
-    qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
+    // qtr.setTypeAnalog();
+    // qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
 
-    for(uint8_t i = 0; i < 250; i++){
-        Serial.println("calibrating");
-        qtr.calibrate();
-        delay(20);
-    }
+    // //Calibrates color sensor
+    // for(uint8_t i = 0; i < 250; i++){
+    //     Serial.println("calibrating");
+    //     qtr.calibrate();
+    //     delay(20);
+    // }
 
 
 
@@ -169,22 +170,35 @@ void loop() {
             Serial.print("Servo_R: ");
             Serial.print(rightInput);
         }
+        Serial.print((float) controller->axisRY());
+        Serial.print("Servo_R: ");
+        Serial.print(rightInput);
         servo_L.write(leftInput);
-        servo_R.write(rightInput);
+        //servo_R.write(rightInput);
         
     }
     
-    uint16_t sensors[3];
-    int16_t position = qtr.readLineBlack(sensors);
-    int16_t error = position - 1000;
-    if (error < 0){
-        //Turn left
-        servo_L.write(500);
-    }
-    if (error > 0){
-        //Turn right
-        servo_R.write(500);
-    }
+    // uint16_t sensors[3];
+    // int16_t position = qtr.readLineBlack(sensors);
+    // //Returns an integer value for the error by which the robot is off from the line
+    // //error < 0 = too far right, error > 0 = too far left, error = 0 means stay on track
+    // int16_t error = position - 1000;
+    // if(output == true){
+        
+    // }
+    // if (error < 0){
+    //     //Turn left
+    //     servo_L.write(500);
+    // }
+    // else if (error > 0){
+    //     //Turn right
+    //     servo_R.write(500);
+    // }
+    // else{
+    //     //Continue straight
+    //     servo_L.write(500);
+    //     servo_R.write(500);
+    // }
     vTaskDelay(1);
 
     // It is safe to always do this before using the gamepad API.
