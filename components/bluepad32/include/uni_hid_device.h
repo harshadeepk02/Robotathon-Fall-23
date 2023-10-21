@@ -77,7 +77,7 @@ struct uni_hid_device_s {
     // And Nintendo Switch Pro gamepad requires to do the SDP query after l2cap
     // connect, so we use this variable to determine when to do the SDP query.
     // TODO: Actually this is not entirely true since it works Ok when using
-    // Unijoysticle + btstack + libusb in Linux. The correct thing to do is to
+    // Unijoysticle + btstack + libubsb in Linux. The correct thing to do is to
     // debug the Linux connection and see what packets are sent before the
     // connection.
     uni_sdp_query_type_t sdp_query_type;

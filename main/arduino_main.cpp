@@ -26,7 +26,16 @@ limitations under the License.
 #include <ESP32SharpIR.h>
 #include <QTRSensors.h>
 #define LED 2
-boolean output = false;
+
+//Color Sensor
+#include <Wire.h>
+#include <Arduino_APDS9960.h>
+#include <bits/stdc++.h>
+#define APDS9960_INT 2
+#define I2C_SDA 21
+#define I2C_SCL 22
+#define I2C_FREQ 100000
+
 
 //
 // README FIRST, README FIRST, README FIRST
@@ -42,6 +51,9 @@ boolean output = false;
 // from "sdkconfig.defaults" with:
 //    CONFIG_BLUEPAD32_USB_CONSOLE_ENABLE=n
 
+
+
+boolean output = false;
 GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
 
 // This callback gets called any time a new gamepad is connected.
@@ -87,29 +99,45 @@ Servo servo_L;
 Servo servo_R;
 ESP32SharpIR sensor1( ESP32SharpIR::GP2Y0A21YK0F, 27);
 QTRSensors qtr;
+TwoWire I2C_0 = TwoWire(0);
+APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
+void LineFollow();
+void ColorSensor();
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
 
-    //Sample Code
+    //Set up controller
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
     BP32.forgetBluetoothKeys();
 
+    //Set up servo motors left & right
     servo_L.setPeriodHertz(50);
     servo_L.attach(13, 1000, 2000);
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
 
     Serial.begin(115200);
-    // qtr.setTypeAnalog();
-    // qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
 
-    // //Calibrates color sensor
-    // for(uint8_t i = 0; i < 250; i++){
-    //     Serial.println("calibrating");
-    //     qtr.calibrate();
-    //     delay(20);
-    // }
+    //Set up line sensor
+    qtr.setTypeRC();
+    qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
+
+    //Calibrates line sensor
+    for(uint8_t i = 0; i < 250; i++){
+        Serial.println("calibrating");
+        qtr.calibrate();
+        delay(20);
+    }
+
+    //Setup color sensor & I2C protocol
+    I2C_0.begin(I2C_SDA, I2C_SCL, I2C_FREQ);
+    apds.setInterruptPin(APDS9960_INT);
+    if(!apds.begin()) {
+        Serial.println("Uh oh! Color Sensor not working");
+    }
+    apds.setLEDBoost(3); 
+    Serial.begin(115200);
 
 
 
@@ -163,42 +191,24 @@ void loop() {
     GamepadPtr controller = myGamepads[0];
     if (controller && controller->isConnected()){
         float leftInput = ((((float) controller->axisY()) / 512.0f) * 500) + 1500;
-        float rightInput = ((((float) controller->axisRY()) / 512.0f) * 500) + 1500;
+        float rightInput = ((((float) controller->axisRY()) / 512.0f) * -500) + 1500;
         if(output){
             Serial.print("Servo_L: ");
             Serial.print(leftInput);
             Serial.print("Servo_R: ");
             Serial.print(rightInput);
         }
-        Serial.print((float) controller->axisRY());
-        Serial.print("Servo_R: ");
-        Serial.print(rightInput);
         servo_L.write(leftInput);
-        //servo_R.write(rightInput);
-        
+        servo_R.write(rightInput);
+
+        if(controller->y()){
+            LineFollow();
+        }
+
+        if(controller->x()){
+            ColorSensor();
+        }
     }
-    
-    // uint16_t sensors[3];
-    // int16_t position = qtr.readLineBlack(sensors);
-    // //Returns an integer value for the error by which the robot is off from the line
-    // //error < 0 = too far right, error > 0 = too far left, error = 0 means stay on track
-    // int16_t error = position - 1000;
-    // if(output == true){
-        
-    // }
-    // if (error < 0){
-    //     //Turn left
-    //     servo_L.write(500);
-    // }
-    // else if (error > 0){
-    //     //Turn right
-    //     servo_R.write(500);
-    // }
-    // else{
-    //     //Continue straight
-    //     servo_L.write(500);
-    //     servo_R.write(500);
-    // }
     vTaskDelay(1);
 
     // It is safe to always do this before using the gamepad API.
@@ -213,20 +223,20 @@ void loop() {
     //         // Another way to query the buttons, is by calling buttons(), or
     //         // miscButtons() which return a bitmask.
     //         // Some gamepads also have DPAD, axis and more.
-    //         // Console.printf(
-    //         //     "idx=%d, dpad: 0x%02x, buttons: 0x%04x, axis L: %4d, %4d, axis R: %4d, "
-    //         //     "%4d, brake: %4d, throttle: %4d, misc: 0x%02x\n",
-    //         //     i,                        // Gamepad Index
-    //         //     myGamepad->dpad(),        // DPAD
-    //         //     myGamepad->buttons(),     // bitmask of pressed buttons
-    //         //     myGamepad->axisX(),       // (-511 - 512) left X Axis
-    //         //     myGamepad->axisY(),       // (-511 - 512) left Y axis
-    //         //     myGamepad->axisRX(),      // (-511 - 512) right X axis
-    //         //     myGamepad->axisRY(),      // (-511 - 512) right Y axis
-    //         //     myGamepad->brake(),       // (0 - 1023): brake button
-    //         //     myGamepad->throttle(),    // (0 - 1023): throttle (AKA gas) button
-    //         //     myGamepad->miscButtons()  // bitmak of pressed "misc" buttons
-    //         // );
+            // Console.printf(
+            //     "idx=%d, dpad: 0x%02x, buttons: 0x%04x, axis L: %4d, %4d, axis R: %4d, "
+            //     "%4d, brake: %4d, throttle: %4d, misc: 0x%02x\n",
+            //     i,                        // Gamepad Index
+            //     myGamepad->dpad(),        // DPAD
+            //     myGamepad->buttons(),     // bitmask of pressed buttons
+            //     myGamepad->axisX(),       // (-511 - 512) left X Axis
+            //     myGamepad->axisY(),       // (-511 - 512) left Y axis
+            //     myGamepad->axisRX(),      // (-511 - 512) right X axis
+            //     myGamepad->axisRY(),      // (-511 - 512) right Y axis
+            //     myGamepad->brake(),       // (0 - 1023): brake button
+            //     myGamepad->throttle(),    // (0 - 1023): throttle (AKA gas) button
+            //     myGamepad->miscButtons()  // bitmak of pressed "misc" buttons
+            // );
 
     //         // You can query the axis and other properties as well. See Gamepad.h
     //         // For all the available functions.
@@ -256,4 +266,83 @@ void loop() {
     //     Serial.println("Straight Ahead");  
     // }
     // delay(100);
+}
+
+void LineFollow(){
+    while(1){
+        uint16_t sensors[3];
+        int16_t position = qtr.readLineBlack(sensors);
+        //Returns an integer value for the error by which the robot is off from the line
+        //error < 0 = too far right, error > 0 = too far left, error = 0 means stay on track
+        //Error is set for using 3 inputs, increase error for more inputs
+        int16_t error = position - 1000;
+
+
+        // Serial.print("Error: ");
+        // Serial.println(error);
+        // delay(100);
+        // Serial.print("Zero: ");
+        // Serial.println(sensors[0]);
+        // delay(100);
+        // Serial.print("One: ");
+        // Serial.println(sensors[1]);
+        // delay(100);
+        // Serial.print("Two: ");
+        // Serial.println(sensors[2]);        
+        // delay(100);
+        // if(sensors[1] < 100 && sensors[2] < 100){
+        //     servo_L.write(1300);
+        //     servo_R.write(1400);
+        //     delay(500);
+        // }
+
+
+        if (error > 0){
+            //Turn left
+            servo_L.write(1600);
+            servo_R.write(1600);
+            //vTaskDelay(1);
+        }
+        else if (error < 0){
+            //Turn right
+            servo_L.write(1400);
+            servo_R.write(1400);
+            //vTaskDelay(1);``````````````  ````````````````````````````````````
+        }
+        else{
+            //Continue straight
+            servo_L.write(1400);
+            servo_R.write(1600);
+            //vTaskDelay(1);
+        }
+        BP32.update();
+        GamepadPtr controller = myGamepads[0];
+        if (controller && controller->isConnected()){
+            if(controller->a()){
+                return;
+            }
+        }
+        vTaskDelay(1);
+    }
+}
+
+void ColorSensor(){
+    Serial.print("Color sensing");
+    int r, g, b, a;
+    while(apds.colorAvailable() == 0){
+        delay(5);
+            Serial.print("Waiting");
+    }
+    Serial.print("Color sensing 2");
+    //Assign color sensor values to r,g,b,a
+    apds.readColor(r, g, b, a);
+
+    Serial.print("Color sensing 3");
+
+    Serial.print("RED: ");
+    Serial.println(r);
+    Serial.print("GREEN: ");
+    Serial.println(g);
+    Serial.print("BLUE: ");
+    Serial.println(b);
 }
