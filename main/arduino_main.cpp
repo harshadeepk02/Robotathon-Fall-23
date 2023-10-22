@@ -121,14 +121,15 @@ void setup() {
 
     //Set up line sensor
     qtr.setTypeRC();
-    qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
+    qtr.setSensorPins((const uint8_t[]) {5, 17, 16, 18, 19}, 5);
 
     //Calibrates line sensor
     for(uint8_t i = 0; i < 250; i++){
         Serial.println("calibrating");
         qtr.calibrate();
-        delay(20);
+        delay(50);
     }
+    Serial.println("done callibrating"); 
 
     //Setup color sensor & I2C protocol
     I2C_0.begin(I2C_SDA, I2C_SCL, I2C_FREQ);
@@ -270,26 +271,25 @@ void loop() {
 
 void LineFollow(){
     while(1){
-        uint16_t sensors[3];
+        uint16_t sensors[5];
         int16_t position = qtr.readLineBlack(sensors);
         //Returns an integer value for the error by which the robot is off from the line
         //error < 0 = too far right, error > 0 = too far left, error = 0 means stay on track
         //Error is set for using 3 inputs, increase error for more inputs
-        int16_t error = position - 1000;
+        int16_t error = position - 1500;
 
-
-        // Serial.print("Error: ");
-        // Serial.println(error);
-        // delay(100);
-        // Serial.print("Zero: ");
-        // Serial.println(sensors[0]);
-        // delay(100);
-        // Serial.print("One: ");
-        // Serial.println(sensors[1]);
-        // delay(100);
-        // Serial.print("Two: ");
-        // Serial.println(sensors[2]);        
-        // delay(100);
+        Serial.print("Error: ");
+        Serial.println(error);
+        delay(100);
+        Serial.print("Zero: ");
+        Serial.println(sensors[0]);
+        delay(100);
+        Serial.print("One: ");
+        Serial.println(sensors[1]);
+        delay(100);
+        Serial.print("Two: ");
+        Serial.println(sensors[2]);        
+        delay(100);
         // if(sensors[1] < 100 && sensors[2] < 100){
         //     servo_L.write(1300);
         //     servo_R.write(1400);
