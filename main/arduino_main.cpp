@@ -31,7 +31,7 @@ limitations under the License.
 #include <Wire.h>
 #include <Arduino_APDS9960.h>
 #include <bits/stdc++.h>
-#define APDS9960_INT 2
+#define APDS9960_INT 4
 #define I2C_SDA 21
 #define I2C_SCL 22
 #define I2C_FREQ 100000
@@ -103,9 +103,11 @@ TwoWire I2C_0 = TwoWire(0);
 APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
 void LineFollow();
 void ColorSensor();
+char evalMax(int r, int g, int b);
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
+    Serial.begin(115200);
 
     //Set up controller
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
@@ -117,7 +119,9 @@ void setup() {
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
 
-    Serial.begin(115200);
+    //Setup LED
+    pinMode(LED, OUTPUT);
+    digitalWrite(LED, HIGH);
 
     //Set up line sensor
     qtr.setTypeRC();
@@ -136,7 +140,7 @@ void setup() {
     if(!apds.begin()) {
         Serial.println("Uh oh! Color Sensor not working");
     }
-    apds.setLEDBoost(3); 
+    apds.setLEDBoost(1); 
     Serial.begin(115200);
 
 
@@ -165,8 +169,6 @@ void setup() {
     // sensor1.setFilterRate(0.1f);
 
     // LED Pin 
-
-    //pinMode(LED, OUTPUT);
 
     // qtr.setTypeRC(); // or se    tTypeAnalog()
     // qtr.setSensorPins((const uint8_t[]) {12,13,14}, 3);
@@ -327,22 +329,87 @@ void LineFollow(){
 }
 
 void ColorSensor(){
-    Serial.print("Color sensing");
     int r, g, b, a;
     while(apds.colorAvailable() == 0){
         delay(5);
-            Serial.print("Waiting");
     }
-    Serial.print("Color sensing 2");
     //Assign color sensor values to r,g,b,a
     apds.readColor(r, g, b, a);
 
-    Serial.print("Color sensing 3");
+    //Highest RGB color we are looking for from initial reading
+    char maxCol = evalMax(r, g, b);
+    int repeat = 0;
+    if(maxCol == 'r'){
+        repeat = 1;
+    }
+    else if(maxCol == 'g'){
+        repeat = 2;
+    }
+    else if(maxCol == 'b'){
+        repeat = 3;
+    }
 
-    Serial.print("RED: ");
-    Serial.println(r);
-    Serial.print("GREEN: ");
-    Serial.println(g);
-    Serial.print("BLUE: ");
-    Serial.println(b);
+    //Flash LED on initial color reading
+    for(int i = 0; i < repeat; i++){
+        digitalWrite(LED, HIGH);
+        delay(1000);
+        digitalWrite(LED, LOW);
+        delay(1000);
+    }
+
+    //Move off of the initial color reading to the next color
+    boolean keepGoing = true;
+    while(keepGoing){
+        servo_L.write(1400);
+        servo_R.write(1600);
+        while(apds.colorAvailable() == 0){
+        delay(5);
+        }
+        apds.readColor(r, g, b, a);
+        if(evalMax(r, g, b) != maxCol){
+            keepGoing = false;
+        }
+    }
+
+    //Move forward until the color from earlier is found again
+    boolean notFound = true;
+    while(notFound){
+        servo_L.write(1400);
+        servo_R.write(1600);
+        while(apds.colorAvailable() == 0){
+        delay(5);
+        }
+        apds.readColor(r, g, b, a);
+        if(evalMax(r, g, b) == maxCol){
+            notFound = false;
+        }
+    }
+
+    //Now we are on the right color: flash LED appropriate number of times
+    for(int i = 0; i < repeat; i++){
+        digitalWrite(LED, HIGH);
+        delay(1000);
+        digitalWrite(LED, LOW);
+    }
+
+
+    // Serial.print("RED: ");
+    // Serial.println(r);
+    // Serial.print("GREEN: ");
+    // Serial.println(g);
+    // Serial.print("BLUE: ");
+    // Serial.println(b);
+}
+
+char evalMax(int r, int g, int b){
+    if(r == std::max(std::max(r, g), b)){
+        return 'r';
+    }
+    else if(g == std::max(std::max(r, g), b)){
+        return 'g';
+    }
+    else if(b == std::max(std::max(r, g), b)){
+        return 'b';
+    }
+    return Coll;
 }
