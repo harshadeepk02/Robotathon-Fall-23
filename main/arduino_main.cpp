@@ -97,6 +97,7 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 
 Servo servo_L;
 Servo servo_R;
+Servo servo_shoot;
 ESP32SharpIR sensor1( ESP32SharpIR::GP2Y0A21YK0F, 27);
 QTRSensors qtr;
 TwoWire I2C_0 = TwoWire(0);
@@ -118,6 +119,8 @@ void setup() {
     servo_L.attach(13, 1000, 2000);
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
+    servo_shoot.setPeriodHertz(50);
+    servo_shoot.attach(12, 1000, 2000);
 
     //Setup LED
     pinMode(LED, OUTPUT);
@@ -209,6 +212,18 @@ void loop() {
 
         if(controller->x()){
             ColorSensor();
+        }
+        if(controller-> l2()){
+            servo_shoot.write(1400);
+            vTaskDelay(1);
+            servo_shoot.write(1500);
+            vTaskDelay(1);
+        }
+        if(controller->r2()){
+            servo_shoot.write(1600);
+            vTaskDelay(1);
+            servo_shoot.write(1500);
+            vTaskDelay(1);
         }
     }
     vTaskDelay(1);
