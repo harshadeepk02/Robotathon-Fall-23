@@ -98,12 +98,15 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 Servo servo_L;
 Servo servo_R;
 Servo servo_shoot;
-ESP32SharpIR sensor1( ESP32SharpIR::GP2Y0A21YK0F, 27);
+ESP32SharpIR front( ESP32SharpIR::GP2Y0A21YK0F, 27);
+ESP32SharpIR left( ESP32SharpIR::GP2Y0A21YK0F, 26);
+ESP32SharpIR right( ESP32SharpIR::GP2Y0A21YK0F, 25);
 QTRSensors qtr;
 TwoWire I2C_0 = TwoWire(0);
 APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
 void LineFollow();
 void ColorSensor();
+void DistanceSensor(); 
 char evalMax(int r, int g, int b);
 
 // Arduino setup function. Runs in CPU 1
@@ -146,8 +149,10 @@ void setup() {
     apds.setLEDBoost(1); 
     Serial.begin(115200);
 
-
-
+    // setup distance sensors
+    front.setFilterRate(0.1f);
+    left.setFilterRate(0.1f); 
+    right.setFilterRate(0.1f); 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
 
@@ -209,9 +214,11 @@ void loop() {
         if(controller->y()){
             LineFollow();
         }
-
         if(controller->x()){
             ColorSensor();
+        }
+        if(controller->b()) {
+            DistanceSensor(); 
         }
         if(controller-> l2()){
             servo_shoot.write(1400);
@@ -414,6 +421,39 @@ void ColorSensor(){
     // Serial.println(g);
     // Serial.print("BLUE: ");
     // Serial.println(b);
+}
+
+void DistanceSensor() {
+    while(1) {
+        bool wallFront = front.getDistanceFloat() < 14.00;
+        bool wallRight = right.getDistanceFloat() < 14.00; 
+        bool wallLeft = left.getDistanceFloat() < 14.00; 
+        if (!wallFront) {
+            Serial.println("Go Forward"); 
+            Serial.println(front.getDistanceFloat()); 
+        } else if (!wallRight) {
+            Serial.println("Go Right"); 
+            Serial.println(front.getDistanceFloat());
+            Serial.println(right.getDistanceFloat()); 
+        } else if (!wallLeft) {
+            Serial.println("Go Left"); 
+            Serial.println(front.getDistanceFloat());
+            Serial.println(right.getDistanceFloat()); 
+            Serial.println(left.getDistanceFloat());
+        } else {
+            Serial.println("Turn Around"); 
+            Serial.println(front.getDistanceFloat());
+            Serial.println(right.getDistanceFloat()); 
+            Serial.println(left.getDistanceFloat());
+        }
+        BP32.update();
+        GamepadPtr controller = myGamepads[0];
+        if (controller && controller->isConnected()){
+            if(controller->a()){
+                return;
+            }
+        }
+    }
 }
 
 char evalMax(int r, int g, int b){
