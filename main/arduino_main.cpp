@@ -107,6 +107,8 @@ APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
 void LineFollow();
 void ColorSensor();
 void DistanceSensor(); 
+void TurnRight(); 
+
 char evalMax(int r, int g, int b);
 
 // Arduino setup function. Runs in CPU 1
