@@ -98,7 +98,8 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 Servo servo_L;
 Servo servo_R;
 ESP32SharpIR sensor1( ESP32SharpIR::GP2Y0A21YK0F, 27);
-QTRSensors qtr;
+QTRSensors qtr1;
+//QTRSensors qtr2; 
 TwoWire I2C_0 = TwoWire(0);
 APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
 void LineFollow();
@@ -120,13 +121,16 @@ void setup() {
     Serial.begin(115200);
 
     //Set up line sensor
-    qtr.setTypeRC();
-    qtr.setSensorPins((const uint8_t[]) {5, 17, 16, 18, 19}, 5);
+    qtr1.setTypeRC();
+    qtr1.setSensorPins((const uint8_t[]) {18, 19, 16}, 3);
+    //qtr2.setTypeRC(); 
+    //qtr2.setSensorPins((const uint8_t[]) {18, 19}, 5, 17 2);
 
     //Calibrates line sensor
     for(uint8_t i = 0; i < 250; i++){
         Serial.println("calibrating");
-        qtr.calibrate();
+        qtr1.calibrate();
+        //qtr2.calibrate(); 
         delay(50);
     }
     Serial.println("done callibrating"); 
@@ -271,12 +275,14 @@ void loop() {
 
 void LineFollow(){
     while(1){
-        uint16_t sensors[5];
-        int16_t position = qtr.readLineBlack(sensors);
+        uint16_t sensors[3];
+        //uint16_t farSensors[2]; 
+        int16_t position = qtr1.readLineBlack(sensors);
+        //qtr2.readLineBlack(farSensors); 
         //Returns an integer value for the error by which the robot is off from the line
         //error < 0 = too far right, error > 0 = too far left, error = 0 means stay on track
         //Error is set for using 3 inputs, increase error for more inputs
-        int16_t error = position - 1500;
+        int16_t error = position - 1000;
 
         Serial.print("Error: ");
         Serial.println(error);
@@ -299,14 +305,14 @@ void LineFollow(){
 
         if (error > 0){
             //Turn left
-            servo_L.write(1600);
+            servo_L.write(1500);
             servo_R.write(1600);
             //vTaskDelay(1);
         }
         else if (error < 0){
             //Turn right
             servo_L.write(1400);
-            servo_R.write(1400);
+            servo_R.write(1500);
             //vTaskDelay(1);``````````````  ````````````````````````````````````
         }
         else{
