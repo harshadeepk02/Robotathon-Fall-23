@@ -31,7 +31,7 @@ limitations under the License.
 #include <Wire.h>
 #include <Arduino_APDS9960.h>
 #include <bits/stdc++.h>
-#define APDS9960_INT 2
+#define APDS9960_INT 4
 #define I2C_SDA 21
 #define I2C_SCL 22
 #define I2C_FREQ 100000
@@ -97,16 +97,23 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 
 Servo servo_L;
 Servo servo_R;
-ESP32SharpIR sensor1( ESP32SharpIR::GP2Y0A21YK0F, 27);
-QTRSensors qtr1;
-//QTRSensors qtr2; 
+Servo servo_shoot;
+ESP32SharpIR front( ESP32SharpIR::GP2Y0A21YK0F, 27);
+ESP32SharpIR left( ESP32SharpIR::GP2Y0A21YK0F, 26);
+ESP32SharpIR right( ESP32SharpIR::GP2Y0A21YK0F, 25);
+QTRSensors qtr;
 TwoWire I2C_0 = TwoWire(0);
 APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
 void LineFollow();
 void ColorSensor();
+void DistanceSensor(); 
+void TurnRight(); 
+
+char evalMax(int r, int g, int b);
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
+    Serial.begin(115200);
 
     //Set up controller
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
@@ -117,8 +124,12 @@ void setup() {
     servo_L.attach(13, 1000, 2000);
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
+    servo_shoot.setPeriodHertz(50);
+    servo_shoot.attach(12, 1000, 2000);
 
-    Serial.begin(115200);
+    //Setup LED
+    pinMode(LED, OUTPUT);
+    digitalWrite(LED, HIGH);
 
     //Set up line sensor
     qtr1.setTypeRC();
@@ -141,11 +152,13 @@ void setup() {
     if(!apds.begin()) {
         Serial.println("Uh oh! Color Sensor not working");
     }
-    apds.setLEDBoost(3); 
+    apds.setLEDBoost(1); 
     Serial.begin(115200);
 
-
-
+    // setup distance sensors
+    front.setFilterRate(0.1f);
+    left.setFilterRate(0.1f); 
+    right.setFilterRate(0.1f); 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
 
@@ -170,8 +183,6 @@ void setup() {
     // sensor1.setFilterRate(0.1f);
 
     // LED Pin 
-
-    //pinMode(LED, OUTPUT);
 
     // qtr.setTypeRC(); // or se    tTypeAnalog()
     // qtr.setSensorPins((const uint8_t[]) {12,13,14}, 3);
@@ -209,9 +220,23 @@ void loop() {
         if(controller->y()){
             LineFollow();
         }
-
         if(controller->x()){
             ColorSensor();
+        }
+        if(controller->b()) {
+            DistanceSensor(); 
+        }
+        if(controller-> l2()){
+            servo_shoot.write(1400);
+            vTaskDelay(1);
+            servo_shoot.write(1500);
+            vTaskDelay(1);
+        }
+        if(controller->r2()){
+            servo_shoot.write(1600);
+            vTaskDelay(1);
+            servo_shoot.write(1500);
+            vTaskDelay(1);
         }
     }
     vTaskDelay(1);
@@ -333,22 +358,120 @@ void LineFollow(){
 }
 
 void ColorSensor(){
-    Serial.print("Color sensing");
     int r, g, b, a;
     while(apds.colorAvailable() == 0){
         delay(5);
-            Serial.print("Waiting");
     }
-    Serial.print("Color sensing 2");
     //Assign color sensor values to r,g,b,a
     apds.readColor(r, g, b, a);
 
-    Serial.print("Color sensing 3");
+    //Highest RGB color we are looking for from initial reading
+    char maxCol = evalMax(r, g, b);
+    int repeat = 0;
+    if(maxCol == 'r'){
+        repeat = 1;
+    }
+    else if(maxCol == 'g'){
+        repeat = 2;
+    }
+    else if(maxCol == 'b'){
+        repeat = 3;
+    }
 
-    Serial.print("RED: ");
-    Serial.println(r);
-    Serial.print("GREEN: ");
-    Serial.println(g);
-    Serial.print("BLUE: ");
-    Serial.println(b);
+    //Flash LED on initial color reading
+    for(int i = 0; i < repeat; i++){
+        digitalWrite(LED, HIGH);
+        delay(1000);
+        digitalWrite(LED, LOW);
+        delay(1000);
+    }
+
+    //Move off of the initial color reading to the next color
+    boolean keepGoing = true;
+    while(keepGoing){
+        servo_L.write(1400);
+        servo_R.write(1600);
+        while(apds.colorAvailable() == 0){
+        delay(5);
+        }
+        apds.readColor(r, g, b, a);
+        if(evalMax(r, g, b) != maxCol){
+            keepGoing = false;
+        }
+    }
+
+    //Move forward until the color from earlier is found again
+    boolean notFound = true;
+    while(notFound){
+        servo_L.write(1400);
+        servo_R.write(1600);
+        while(apds.colorAvailable() == 0){
+        delay(5);
+        }
+        apds.readColor(r, g, b, a);
+        if(evalMax(r, g, b) == maxCol){
+            notFound = false;
+        }
+    }
+
+    //Now we are on the right color: flash LED appropriate number of times
+    for(int i = 0; i < repeat; i++){
+        digitalWrite(LED, HIGH);
+        delay(1000);
+        digitalWrite(LED, LOW);
+    }
+
+
+    // Serial.print("RED: ");
+    // Serial.println(r);
+    // Serial.print("GREEN: ");
+    // Serial.println(g);
+    // Serial.print("BLUE: ");
+    // Serial.println(b);
+}
+
+void DistanceSensor() {
+    while(1) {
+        bool wallFront = front.getDistanceFloat() < 14.00;
+        bool wallRight = right.getDistanceFloat() < 14.00; 
+        bool wallLeft = left.getDistanceFloat() < 14.00; 
+        if (!wallFront) {
+            Serial.println("Go Forward"); 
+            Serial.println(front.getDistanceFloat()); 
+        } else if (!wallRight) {
+            Serial.println("Go Right"); 
+            Serial.println(front.getDistanceFloat());
+            Serial.println(right.getDistanceFloat()); 
+        } else if (!wallLeft) {
+            Serial.println("Go Left"); 
+            Serial.println(front.getDistanceFloat());
+            Serial.println(right.getDistanceFloat()); 
+            Serial.println(left.getDistanceFloat());
+        } else {
+            Serial.println("Turn Around"); 
+            Serial.println(front.getDistanceFloat());
+            Serial.println(right.getDistanceFloat()); 
+            Serial.println(left.getDistanceFloat());
+        }
+        BP32.update();
+        GamepadPtr controller = myGamepads[0];
+        if (controller && controller->isConnected()){
+            if(controller->a()){
+                return;
+            }
+        }
+    }
+}
+
+char evalMax(int r, int g, int b){
+    if(r == std::max(std::max(r, g), b)){
+        return 'r';
+    }
+    else if(g == std::max(std::max(r, g), b)){
+        return 'g';
+    }
+    else if(b == std::max(std::max(r, g), b)){
+        return 'b';
+    }
+    return Coll;
 }
