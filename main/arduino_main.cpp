@@ -98,7 +98,7 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 Servo servo_L;
 Servo servo_R;
 Servo servo_shoot;
-ESP32SharpIR front( ESP32SharpIR::GP2Y0A21YK0F, 27);
+ESP32SharpIR front( ESP32SharpIR::GP2Y0A21YK0F, 36);
 ESP32SharpIR left( ESP32SharpIR::GP2Y0A21YK0F, 26);
 ESP32SharpIR right( ESP32SharpIR::GP2Y0A21YK0F, 25);
 QTRSensors qtr;
@@ -433,26 +433,27 @@ void ColorSensor(){
 void DistanceSensor() {
     while(1) {
         bool wallFront = front.getDistanceFloat() < 14.00;
+        Serial.println(wallFront);
         bool wallRight = right.getDistanceFloat() < 14.00; 
-        bool wallLeft = left.getDistanceFloat() < 14.00; 
+        //bool wallLeft = left.getDistanceFloat() < 14.00; 
+        Serial.println(front.getDistanceFloat());
+        Serial.println(right.getDistanceFloat());
+        Serial.println(left.getDistanceFloat());
         if (!wallFront) {
-            Serial.println("Go Forward"); 
-            Serial.println(front.getDistanceFloat()); 
+            servo_L.write(1400);
+            servo_R.write(1600);
         } else if (!wallRight) {
-            Serial.println("Go Right"); 
-            Serial.println(front.getDistanceFloat());
-            Serial.println(right.getDistanceFloat()); 
-        } else if (!wallLeft) {
-            Serial.println("Go Left"); 
-            Serial.println(front.getDistanceFloat());
-            Serial.println(right.getDistanceFloat()); 
-            Serial.println(left.getDistanceFloat());
+            for (int i = 0; i < 40000; i++){
+                servo_L.write(1400);
+                servo_R.write(1400);
+            }
         } else {
-            Serial.println("Turn Around"); 
-            Serial.println(front.getDistanceFloat());
-            Serial.println(right.getDistanceFloat()); 
-            Serial.println(left.getDistanceFloat());
+            for (int i = 0; i < 40000; i++){
+                servo_L.write(1600);
+                servo_R.write(1600);
+            }
         }
+
         BP32.update();
         GamepadPtr controller = myGamepads[0];
         if (controller && controller->isConnected()){
