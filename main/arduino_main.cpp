@@ -98,10 +98,12 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 Servo servo_L;
 Servo servo_R;
 Servo servo_shoot;
-ESP32SharpIR front( ESP32SharpIR::GP2Y0A21YK0F, 36);
-ESP32SharpIR left( ESP32SharpIR::GP2Y0A21YK0F, 26);
-ESP32SharpIR right( ESP32SharpIR::GP2Y0A21YK0F, 25);
-QTRSensors qtr;
+ESP32SharpIR front( ESP32SharpIR::GP2Y0A21YK0F, 15);
+ESP32SharpIR left( ESP32SharpIR::GP2Y0A21YK0F, 13);
+ESP32SharpIR right( ESP32SharpIR::GP2Y0A21YK0F, 27);
+QTRSensors qtr1;
+QTRSensors qtr2;
+
 TwoWire I2C_0 = TwoWire(0);
 APDS9960 apds = APDS9960(I2C_0, APDS9960_INT);
 void LineFollow();
@@ -121,26 +123,31 @@ void setup() {
 
     //Set up servo motors left & right
     servo_L.setPeriodHertz(50);
-    servo_L.attach(13, 1000, 2000);
+    servo_L.attach(12, 1000, 2000);
     servo_R.setPeriodHertz(50);
     servo_R.attach(14, 1000, 2000);
-    servo_shoot.setPeriodHertz(50);
-    servo_shoot.attach(12, 1000, 2000);
+    // servo_shoot.setPeriodHertz(50);
+    // servo_shoot.attach(12, 1000, 2000);
 
     //Setup LED
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
 
     //Set up line sensor
-    qtr.setTypeRC();
-    qtr.setSensorPins((const uint8_t[]) {5, 17, 16}, 3);
+    qtr1.setTypeRC();
+    qtr1.setSensorPins((const uint8_t[]) {16, 17, 5}, 3);
+    qtr2.setSensorPins((const uint8_t[]) {18, 19}, 2);
+    qtr2.setTypeRC();
 
-    //Calibrates line sensor
+    // Calibrates line sensor
     for(uint8_t i = 0; i < 250; i++){
         Serial.println("calibrating");
-        qtr.calibrate();
+        qtr1.calibrate();
+        qtr2.calibrate();
+
         delay(20);
     }
+    Serial.println("done calibrating");
 
     //Setup color sensor & I2C protocol
     I2C_0.begin(I2C_SDA, I2C_SCL, I2C_FREQ);
@@ -153,8 +160,8 @@ void setup() {
 
     // setup distance sensors
     front.setFilterRate(0.1f);
-    left.setFilterRate(0.1f); 
-    right.setFilterRate(0.1f); 
+    // left.setFilterRate(0.1f); 
+    // right.setFilterRate(0.1f); 
 
     // Console.printf("Firmware: %s\n", BP32.firmwareVersion());
 
@@ -297,48 +304,54 @@ void loop() {
 void LineFollow(){
     while(1){
         uint16_t sensors[3];
-        int16_t position = qtr.readLineBlack(sensors);
-        //Returns an integer value for the error by which the robot is off from the line
-        //error < 0 = too far right, error > 0 = too far left, error = 0 means stay on track
-        //Error is set for using 3 inputs, increase error for more inputs
-        int16_t error = position - 1000;
+        uint16_t farSensors[2]; 
+        int16_t position = qtr1.readLineBlack(sensors);
+        qtr2.readLineBlack(farSensors); 
 
+    
 
-        // Serial.print("Error: ");
-        // Serial.println(error);
-        // delay(100);
-        // Serial.print("Zero: ");
-        // Serial.println(sensors[0]);
-        // delay(100);
-        // Serial.print("One: ");
-        // Serial.println(sensors[1]);
-        // delay(100);
-        // Serial.print("Two: ");
-        // Serial.println(sensors[2]);        
-        // delay(100);
-        // if(sensors[1] < 100 && sensors[2] < 100){
-        //     servo_L.write(1300);
-        //     servo_R.write(1400);
-        //     delay(500);
+        // if far sensors read anything, do 90 degree turn
+        // if(farSensors[0] < 100) {
+        //     for(int i = 0; i < 20000; i++) {
+        //         servo_L.write(1600);
+        //         servo_R.write(1600);
+        //     }
+        // } else if(farSensors[1] < 100) {
+        //     for(int i = 0; i < 20000; i++) {
+        //         servo_L.write(1400);
+        //         servo_R.write(1400);
+        //     }
         // }
 
+        int16_t error = position - 1000;
+
+        Serial.print("Error: ");
+        Serial.println(error);
+        Serial.print("Zero: ");
+        Serial.println(sensors[0]);
+        Serial.print("One: ");
+        Serial.println(sensors[1]);
+        Serial.print("Two: ");
+        Serial.println(sensors[2]);
 
         if (error > 0){
             //Turn left
-            servo_L.write(1600);
-            servo_R.write(1600);
+
+            servo_L.write(1300);
+            servo_R.write(1300);
             //vTaskDelay(1);
         }
         else if (error < 0){
             //Turn right
-            servo_L.write(1400);
-            servo_R.write(1400);
-            //vTaskDelay(1);``````````````  ````````````````````````````````````
-        }
+            servo_L.write(1700);
+            servo_R.write(1700);
+            //vTaskDelay(1);
+
+}
         else{
             //Continue straight
-            servo_L.write(1400);
-            servo_R.write(1600);
+            servo_L.write(1300);
+            servo_R.write(1700);
             //vTaskDelay(1);
         }
         BP32.update();
@@ -430,25 +443,32 @@ void DistanceSensor() {
         bool wallFront = front.getDistanceFloat() < 14.00;
         Serial.println(wallFront);
         bool wallRight = right.getDistanceFloat() < 14.00; 
-        //bool wallLeft = left.getDistanceFloat() < 14.00; 
+        bool wallLeft = left.getDistanceFloat() < 14.00; 
         Serial.println(front.getDistanceFloat());
         Serial.println(right.getDistanceFloat());
         Serial.println(left.getDistanceFloat());
+        delay(50);
         if (!wallFront) {
             servo_L.write(1400);
             servo_R.write(1600);
-        } else if (!wallRight) {
+            Serial.println("Go Forward"); 
+         }else if (!wallRight) {
             for (int i = 0; i < 40000; i++){
-                servo_L.write(1400);
-                servo_R.write(1400);
+            servo_L.write(1400);
+            servo_R.write(1400);
             }
-        } else {
+            Serial.println("Go Right"); 
+          } else if  (!wallLeft){
             for (int i = 0; i < 40000; i++){
-                servo_L.write(1600);
-                servo_R.write(1600);
+            servo_L.write(1600);
+            servo_R.write(1600);
             }
-        }
+            Serial.println("Go Left");
 
+         } else {
+            Serial.println("Turn Around"); 
+ 
+        }
         BP32.update();
         GamepadPtr controller = myGamepads[0];
         if (controller && controller->isConnected()){
@@ -456,8 +476,13 @@ void DistanceSensor() {
                 return;
             }
         }
+
     }
-}
+
+        
+
+       
+    }
 
 char evalMax(int r, int g, int b){
     if(r == std::max(std::max(r, g), b)){
